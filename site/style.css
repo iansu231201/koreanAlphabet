@@ -108,4 +108,5 @@ label.auto { display: block; margin-top: 10px; font-size: .9rem; color: var(--mu
 kbd { font-size: .7em; opacity: .7; font-family: inherit; margin-left: 4px; }
 .done .primary { font: inherit; border: 0; border-radius: 999px; padding: 10px 22px; font-weight: 600; cursor: pointer; }
 .practice .note { margin-top: 14px; }
-@media (max-width: 720px) { kbd { display: none; } .flash .word { font-size: 2.8rem; } }
+.flash .word.syl { font-size: 6.5rem; }
+@media (max-width: 720px) { kbd { display: none; } .flash .word { font-size: 2.8rem; } .flash .word.syl { font-size: 5rem; } }
