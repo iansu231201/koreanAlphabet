@@ -1,10 +1,9 @@
-"""產生韓文音節（代表音尾音，涵蓋全部 11,172 字的發音）、子音名稱與練習單字（site/words.json）的 mp3。
+"""產生韓文音節（代表音尾音，涵蓋全部 11,172 字的發音）與子音名稱的 mp3。
 
 已存在的檔案會跳過，可中斷後重跑。
 用法: python scripts/gen_audio.py [--force]
 """
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -12,9 +11,7 @@ import edge_tts
 
 VOICE = "ko-KR-SunHiNeural"
 CONCURRENCY = 8
-SITE = Path(__file__).resolve().parent.parent / "site"
-OUT = SITE / "audio"
-WORDS = SITE / "words.json"
+OUT = Path(__file__).resolve().parent.parent / "site" / "audio"
 
 # 19 個子音名稱（順序同初聲）
 CONSONANT_NAMES = [
@@ -35,8 +32,6 @@ def jobs():
             yield chr(cp), OUT / f"{cp:04X}.mp3"
     for i, name in enumerate(CONSONANT_NAMES):
         yield name, OUT / f"name{i}.mp3"
-    for w in json.loads(WORDS.read_text()):
-        yield w["w"], OUT / "words" / (w["w"].replace(" ", "_") + ".mp3")
 
 
 # 直接保存 edge-tts 原始輸出，不做裁剪：裁掉靜音會切到 ㅅ 等弱起音（사과 聽起來像 차과）。
@@ -59,7 +54,7 @@ async def make(text: str, dst: Path, sem: asyncio.Semaphore):
 
 async def main():
     force = "--force" in sys.argv
-    (OUT / "words").mkdir(parents=True, exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     todo = [(t, p) for t, p in jobs() if force or not p.exists()]
     print(f"待產生 {len(todo)} 個")
     sem = asyncio.Semaphore(CONCURRENCY)

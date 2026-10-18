@@ -12,10 +12,6 @@
   <nav><a href="index.html">發音</a><a href="compose.html">組合</a><a href="practice.html" class="on">練習</a></nav>
 </div></header>
 <main class="practice">
-  <div class="tabs" id="modes">
-    <button data-mode="syl">單字練習</button>
-    <button data-mode="word">詞語練習</button>
-  </div>
   <div class="chips" id="cats"></div>
   <div class="stats">
     <span id="progress"></span>
@@ -24,14 +20,12 @@
   </div>
 
   <div class="flash" id="flash">
-    <div class="word" id="word"></div>
+    <div class="word syl" id="word"></div>
     <div class="answer" id="answer" hidden>
-      <div class="row" id="partsRow"><span class="lbl">組成</span><span id="parts"></span></div>
+      <div class="row"><span class="lbl">組成</span><span id="parts"></span></div>
       <div class="row" id="pronRow"><span class="lbl">讀作</span><span id="pron"></span></div>
       <div class="row"><span class="lbl">羅馬拼音</span><span id="rr"></span></div>
       <div class="row"><span class="lbl">注音近似</span><span class="zy" id="zy"></span></div>
-      <div class="row meaning" id="meaning"></div>
-      <div class="syls" id="syls"></div>
     </div>
     <div class="actions" id="ask">
       <button class="primary" id="reveal">顯示答案 <kbd>空白鍵</kbd></button>
@@ -46,16 +40,14 @@
       <button class="primary" id="restart">重新洗牌再來一輪</button>
     </div>
   </div>
-  <p class="note">看到字先自己唸出來，再按「顯示答案」聽正確發音。選「再練」的會在幾題後再出現。</p>
+  <p class="note">看到字先自己唸出來，再按「顯示答案」聽正確發音。選「再練」的字會在幾題後再出現。</p>
 </main>
 <script src="hangul.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
-let mode = "syl", words = [], queue = [], cur = null, total = 0, nOk = 0, nBad = 0, cat = "";
+let queue = [], cur = null, total = 0, nOk = 0, nBad = 0, cat = "";
 
-// 單字（音節）題庫
-const range = (n, f) => Array.from({ length: n }, (_, i) => f(i));
-const ALL = range(11172, (i) => String.fromCharCode(0xac00 + i));
+const ALL = Array.from({ length: 11172 }, (_, i) => String.fromCharCode(0xac00 + i));
 // 常用字：KS X 1001 的 2,350 個音節（EUC-KR 0xB0A1–0xC8FE）
 function common() {
   try {
@@ -66,7 +58,7 @@ function common() {
     return ALL;
   }
 }
-const SYL_POOLS = {
+const POOLS = {
   "無尾音 (399)": () => ALL.filter((_, i) => i % 28 === 0),
   "常用字 (2,350)": common,
   "全部 (11,172)": () => ALL,
@@ -80,26 +72,9 @@ function shuffle(a) {
   return a;
 }
 
-function setCats(names) {
-  $("cats").innerHTML = names.map((c) => `<button class="chip">${c}</button>`).join("");
-  [...$("cats").children].forEach((b) => {
-    b.onclick = () => { cat = b.textContent; start(); };
-  });
-  cat = names[0];
-}
-
-function setMode(m) {
-  mode = m;
-  [...$("modes").children].forEach((b) => b.classList.toggle("on", b.dataset.mode === m));
-  setCats(m === "syl" ? Object.keys(SYL_POOLS) : ["全部", ...new Set(words.map((w) => w.c))]);
-  start();
-}
-
 function start() {
   [...$("cats").children].forEach((b) => b.classList.toggle("on", b.textContent === cat));
-  queue = mode === "syl"
-    ? shuffle([...SYL_POOLS[cat]()]).map((ch) => ({ w: ch }))
-    : shuffle(words.filter((w) => cat === "全部" || w.c === cat));
+  queue = shuffle([...POOLS[cat]()]);
   total = queue.length; nOk = nBad = 0;
   $("done").hidden = true;
   next();
@@ -119,42 +94,23 @@ function next() {
     return;
   }
   $("ask").hidden = false;
-  $("word").textContent = cur.w;
-  $("word").classList.toggle("syl", mode === "syl");
+  $("word").textContent = cur;
   $("progress").textContent = `剩 ${queue.length + 1} / ${total}`;
-}
-
-function audioOf(item) {
-  return mode === "syl" ? H.syllableAudio(item.w) : H.word(item.w).audio;
 }
 
 function reveal() {
   if (!cur || !$("answer").hidden) return;
-  if (mode === "syl") {
-    const { l, v, t } = H.decompose(cur.w);
-    const x = H.info(l, v, t);
-    $("parts").textContent = [H.L[l].j, H.V[v].j, H.T[t].j].filter(Boolean).join(" + ");
-    $("pron").textContent = `[${x.sound}]`;
-    $("pronRow").hidden = x.sound === x.ch;
-    $("rr").textContent = x.rr;
-    $("zy").innerHTML = x.zy + (x.zyFinal ? `<small>${x.zyFinal}</small>` : "");
-    $("meaning").textContent = "";
-    $("syls").innerHTML = "";
-  } else {
-    const x = H.word(cur.w, cur.p);
-    $("pron").textContent = `[${cur.p}]`;
-    $("pronRow").hidden = !cur.p;
-    $("rr").textContent = cur.r || x.rr; // r：拼音照拼寫的例外（ㅢ、ㅖ）
-    $("zy").innerHTML = x.zy;
-    $("meaning").textContent = cur.m;
-    $("syls").innerHTML = [...cur.w].filter(H.isSyl)
-      .map((ch) => `<button data-audio="${H.syllableAudio(ch)}" title="聽這個字">${ch}</button>`).join("");
-  }
-  $("partsRow").hidden = mode !== "syl";
+  const { l, v, t } = H.decompose(cur);
+  const x = H.info(l, v, t);
+  $("parts").textContent = [H.L[l].j, H.V[v].j, H.T[t].j].filter(Boolean).join(" + ");
+  $("pron").textContent = `[${x.sound}]`;
+  $("pronRow").hidden = x.sound === x.ch;
+  $("rr").textContent = x.rr;
+  $("zy").innerHTML = x.zy + (x.zyFinal ? `<small>${x.zyFinal}</small>` : "");
   $("answer").hidden = false;
   $("ask").hidden = true;
   $("judge").hidden = false;
-  H.play(audioOf(cur));
+  H.play(x.audio);
 }
 
 function judge(good) {
@@ -170,26 +126,21 @@ function judge(good) {
 $("reveal").onclick = reveal;
 $("ok").onclick = () => judge(true);
 $("bad").onclick = () => judge(false);
-$("replay").onclick = () => cur && H.play(audioOf(cur));
+$("replay").onclick = () => cur && H.play(H.syllableAudio(cur));
 $("restart").onclick = start;
-$("modes").onclick = (e) => {
-  const b = e.target.closest("button");
-  if (b && b.dataset.mode !== mode) setMode(b.dataset.mode);
-};
-$("syls").onclick = (e) => {
-  const b = e.target.closest("button");
-  if (b) H.play(b.dataset.audio);
-};
 document.addEventListener("keydown", (e) => {
-  if (e.target.closest("input, textarea")) return;
   if (e.key === " ") { e.preventDefault(); $("answer").hidden ? reveal() : judge(true); }
   else if (e.key === "ArrowRight" || e.key === "Enter") judge(true);
   else if (e.key === "ArrowLeft") judge(false);
   else if (e.key.toLowerCase() === "p" && !$("answer").hidden) $("replay").click();
 });
 
-setMode("syl");
-fetch("words.json").then((r) => r.json()).then((list) => { words = list; });
+$("cats").innerHTML = Object.keys(POOLS).map((c) => `<button class="chip">${c}</button>`).join("");
+[...$("cats").children].forEach((b) => {
+  b.onclick = () => { cat = b.textContent; start(); };
+});
+cat = Object.keys(POOLS)[0];
+start();
 </script>
 </body>
 </html>

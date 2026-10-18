@@ -91,12 +91,10 @@ label.auto { display: block; margin-top: 10px; font-size: .9rem; color: var(--mu
   background: var(--card); border: 1px solid var(--line); border-radius: 16px;
   padding: 28px 20px; text-align: center; min-height: 340px;
 }
-.flash .word { font-size: 3.6rem; line-height: 1.2; font-family: "Noto Sans KR", sans-serif; margin: 10px 0 18px; word-break: keep-all; }
+.flash .word { font-size: 3.6rem; line-height: 1.2; font-family: "Noto Sans KR", sans-serif; margin: 10px 0 18px; }
 .answer .row { margin: 4px 0; }
 .answer .lbl { color: var(--muted); font-size: .85rem; margin-right: 6px; }
-.answer .meaning { font-size: 1.25rem; font-weight: 600; margin-top: 8px; }
-.syls { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
-.syls button, .actions button {
+.actions button {
   font: inherit; border: 1px solid var(--line); background: var(--bg); color: var(--fg);
   border-radius: 10px; padding: 6px 12px; cursor: pointer;
 }

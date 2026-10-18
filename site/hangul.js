@@ -100,30 +100,10 @@ const H = (() => {
     player.play().catch(() => {});
   };
 
-  const isSyl = (ch) => ch >= "가" && ch <= "힣";
-  // 單字：依「連音／音變後的讀法」逐字算羅馬拼音與注音
-  const word = (w, pron = w) => {
-    let rr = "", prevT = -1;
-    const zy = [];
-    for (const ch of pron) {
-      if (!isSyl(ch)) { rr += ch; zy.push(ch); prevT = -1; continue; }
-      const { l, v, t } = decompose(ch);
-      const x = info(l, v, t);
-      // ㄹ 尾音後接 ㄹ 初聲寫作 ll（빨리 ppalli）
-      rr += prevT === 8 && l === 5 ? "l" + x.rr.slice(1) : x.rr;
-      zy.push(x.zy + (x.zyFinal ? `<small>${x.zyFinal}</small>` : ""));
-      prevT = t;
-    }
-    return {
-      rr,
-      zy: zy.join(" ").replace(/  +/g, "　"),
-      audio: `audio/words/${encodeURIComponent(w.replace(/ /g, "_"))}.mp3`,
-    };
-  };
   const syllableAudio = (ch) => {
     const { l, v, t } = decompose(ch);
     return info(l, v, t).audio;
   };
 
-  return { L, V, T, REP, compose, decompose, info, play, word, isSyl, syllableAudio, nameAudio: (i) => `audio/name${i}.mp3` };
+  return { L, V, T, REP, compose, decompose, info, play, syllableAudio, nameAudio: (i) => `audio/name${i}.mp3` };
 })();
