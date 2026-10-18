@@ -1,19 +1,20 @@
-"""產生韓文音節（代表音尾音，涵蓋全部 11,172 字的發音）與子音名稱的 mp3。
+"""產生韓文音節（代表音尾音，涵蓋全部 11,172 字的發音）、子音名稱與練習單字（site/words.json）的 mp3。
 
 已存在的檔案會跳過，可中斷後重跑。
 用法: python scripts/gen_audio.py [--force]
 """
 import asyncio
-import subprocess
+import json
 import sys
-import tempfile
 from pathlib import Path
 
 import edge_tts
 
 VOICE = "ko-KR-SunHiNeural"
 CONCURRENCY = 8
-OUT = Path(__file__).resolve().parent.parent / "site" / "audio"
+SITE = Path(__file__).resolve().parent.parent / "site"
+OUT = SITE / "audio"
+WORDS = SITE / "words.json"
 
 # 19 個子音名稱（順序同初聲）
 CONSONANT_NAMES = [
@@ -34,51 +35,40 @@ def jobs():
             yield chr(cp), OUT / f"{cp:04X}.mp3"
     for i, name in enumerate(CONSONANT_NAMES):
         yield name, OUT / f"name{i}.mp3"
+    for w in json.loads(WORDS.read_text()):
+        yield w["w"], OUT / "words" / (w["w"].replace(" ", "_") + ".mp3")
 
 
-def trim(src: Path, dst: Path):
-    """去除前後靜音，轉單聲道 48kbps。"""
-    silence = "silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.05"
-    subprocess.run(
-        ["ffmpeg", "-loglevel", "error", "-y", "-i", str(src),
-         "-af", f"{silence},areverse,{silence},areverse,apad=pad_dur=0.1",
-         "-ac", "1", "-b:a", "48k", str(dst)],
-        check=True,
-    )
-
-
-async def make(text: str, dst: Path, sem: asyncio.Semaphore, tmp: Path):
+# 直接保存 edge-tts 原始輸出，不做裁剪：裁掉靜音會切到 ㅅ 等弱起音（사과 聽起來像 차과）。
+async def make(text: str, dst: Path, sem: asyncio.Semaphore):
     async with sem:
-        raw = tmp / dst.name
+        part = dst.with_suffix(".part")
         for attempt in range(5):
             try:
-                await edge_tts.Communicate(text, VOICE).save(str(raw))
-                if raw.stat().st_size < 1000:
+                await edge_tts.Communicate(text, VOICE).save(str(part))
+                if part.stat().st_size < 1000:
                     raise RuntimeError("音檔過小")
-                break
+                part.rename(dst)
+                return True
             except Exception as e:  # noqa: BLE001
                 if attempt == 4:
                     print(f"失敗 {text}: {e}", file=sys.stderr)
                     return False
                 await asyncio.sleep(2 ** attempt)
-        await asyncio.to_thread(trim, raw, dst)
-        raw.unlink()
-        return True
 
 
 async def main():
     force = "--force" in sys.argv
-    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / "words").mkdir(parents=True, exist_ok=True)
     todo = [(t, p) for t, p in jobs() if force or not p.exists()]
     print(f"待產生 {len(todo)} 個")
     sem = asyncio.Semaphore(CONCURRENCY)
-    with tempfile.TemporaryDirectory() as d:
-        tasks = [make(t, p, sem, Path(d)) for t, p in todo]
-        ok = 0
-        for i, fut in enumerate(asyncio.as_completed(tasks), 1):
-            ok += await fut
-            if i % 500 == 0:
-                print(f"{i}/{len(todo)}")
+    tasks = [make(t, p, sem) for t, p in todo]
+    ok = 0
+    for i, fut in enumerate(asyncio.as_completed(tasks), 1):
+        ok += await fut
+        if i % 500 == 0:
+            print(f"{i}/{len(todo)}")
     print(f"完成 {ok}/{len(todo)}")
     if ok != len(todo):
         sys.exit(1)

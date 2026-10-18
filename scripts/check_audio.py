@@ -24,7 +24,7 @@ for f in expected:
         d = float(json.loads(r.stdout)["format"]["duration"])
     except Exception:  # noqa: BLE001
         d = 0
-    if not 0.2 < d < 3:
+    if not 0.2 < d < 6:
         bad.append((f, d))
 
 dups = [v for v in hashes.values() if len(v) > 1]

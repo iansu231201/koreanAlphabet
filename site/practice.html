@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>韓文單字練習</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="bar">
+  <h1>韓文字母發音表</h1>
+  <nav><a href="index.html">發音</a><a href="compose.html">組合</a><a href="practice.html" class="on">單字練習</a></nav>
+</div></header>
+<main class="practice">
+  <div class="chips" id="cats"></div>
+  <div class="stats">
+    <span id="progress"></span>
+    <span>✓ 會讀 <b id="nOk">0</b></span>
+    <span>✗ 再練 <b id="nBad">0</b></span>
+  </div>
+
+  <div class="flash" id="flash">
+    <div class="word" id="word"></div>
+    <div class="answer" id="answer" hidden>
+      <div class="row" id="pronRow"><span class="lbl">讀作</span><span id="pron"></span></div>
+      <div class="row"><span class="lbl">羅馬拼音</span><span id="rr"></span></div>
+      <div class="row"><span class="lbl">注音近似</span><span class="zy" id="zy"></span></div>
+      <div class="row meaning" id="meaning"></div>
+      <div class="syls" id="syls"></div>
+    </div>
+    <div class="actions" id="ask">
+      <button class="primary" id="reveal">顯示答案 <kbd>空白鍵</kbd></button>
+    </div>
+    <div class="actions" id="judge" hidden>
+      <button id="replay">▶ 再聽 <kbd>P</kbd></button>
+      <button class="bad" id="bad">✗ 再練 <kbd>←</kbd></button>
+      <button class="ok" id="ok">✓ 會讀 <kbd>→</kbd></button>
+    </div>
+    <div class="done" id="done" hidden>
+      <p>這一輪完成了！</p>
+      <button class="primary" id="restart">重新洗牌再來一輪</button>
+    </div>
+  </div>
+  <p class="note">先看著單字自己唸出來，再按「顯示答案」聽正確發音。選「再練」的單字會在幾題後再出現。</p>
+</main>
+<script src="hangul.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let words = [], queue = [], cur = null, total = 0, nOk = 0, nBad = 0, cat = "全部";
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function start() {
+  queue = shuffle(words.filter((w) => cat === "全部" || w.c === cat));
+  total = queue.length; nOk = nBad = 0;
+  $("done").hidden = true;
+  next();
+}
+
+function next() {
+  cur = queue.shift();
+  $("nOk").textContent = nOk;
+  $("nBad").textContent = nBad;
+  $("answer").hidden = true;
+  $("judge").hidden = true;
+  if (!cur) {
+    $("word").textContent = "🎉";
+    $("ask").hidden = true;
+    $("done").hidden = false;
+    $("progress").textContent = `共 ${total} 個`;
+    return;
+  }
+  $("ask").hidden = false;
+  $("word").textContent = cur.w;
+  $("progress").textContent = `剩 ${queue.length + 1} / ${total}`;
+}
+
+function reveal() {
+  if (!cur || !$("answer").hidden) return;
+  const x = H.word(cur.w, cur.p);
+  $("pron").textContent = `[${cur.p}]`;
+  $("pronRow").hidden = !cur.p;
+  $("rr").textContent = cur.r || x.rr; // r：拼音照拼寫的例外（ㅢ、ㅖ）
+  $("zy").innerHTML = x.zy;
+  $("meaning").textContent = cur.m;
+  $("syls").innerHTML = [...cur.w].filter(H.isSyl)
+    .map((ch) => `<button data-audio="${H.syllableAudio(ch)}" title="聽這個字">${ch}</button>`).join("");
+  $("answer").hidden = false;
+  $("ask").hidden = true;
+  $("judge").hidden = false;
+  H.play(x.audio);
+}
+
+function judge(good) {
+  if (!cur || $("judge").hidden) return;
+  if (good) nOk++;
+  else {
+    nBad++;
+    queue.splice(Math.min(4, queue.length), 0, cur);
+  }
+  next();
+}
+
+$("reveal").onclick = reveal;
+$("ok").onclick = () => judge(true);
+$("bad").onclick = () => judge(false);
+$("replay").onclick = () => cur && H.play(H.word(cur.w).audio);
+$("restart").onclick = start;
+$("syls").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (b) H.play(b.dataset.audio);
+};
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea")) return;
+  if (e.key === " ") { e.preventDefault(); $("answer").hidden ? reveal() : judge(true); }
+  else if (e.key === "ArrowRight" || e.key === "Enter") judge(true);
+  else if (e.key === "ArrowLeft") judge(false);
+  else if (e.key.toLowerCase() === "p" && !$("answer").hidden) $("replay").click();
+});
+
+fetch("words.json").then((r) => r.json()).then((list) => {
+  words = list;
+  const cats = ["全部", ...new Set(list.map((w) => w.c))];
+  $("cats").innerHTML = cats.map((c) => `<button class="chip">${c}</button>`).join("");
+  [...$("cats").children].forEach((b) => {
+    b.onclick = () => {
+      cat = b.textContent;
+      [...$("cats").children].forEach((x) => x.classList.toggle("on", x === b));
+      start();
+    };
+  });
+  $("cats").firstChild.classList.add("on");
+  start();
+});
+</script>
+</body>
+</html>
