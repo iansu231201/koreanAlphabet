@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>韓文發音表</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="bar">
+  <h1>韓文字母發音表</h1>
+  <nav><a href="index.html" class="on">發音</a><a href="compose.html">組合</a></nav>
+</div></header>
+<main>
+  <div class="tabs" id="tabs">
+    <button data-tab="cons">子音 (19)</button>
+    <button data-tab="vow">母音 (21)</button>
+    <button data-tab="fin">尾音 (27)</button>
+    <button data-tab="table">子音＋母音 (399)</button>
+  </div>
+  <p class="note" id="note"></p>
+  <div id="view"></div>
+</main>
+<script src="hangul.js"></script>
+<script>
+const view = document.getElementById("view");
+const note = document.getElementById("note");
+const zyHtml = (i) => `${i.zy}${i.zyFinal ? `<small>${i.zyFinal}</small>` : ""}`;
+
+function flash(el) {
+  document.querySelectorAll(".playing").forEach((e) => e.classList.remove("playing"));
+  el.classList.add("playing");
+  setTimeout(() => el.classList.remove("playing"), 600);
+}
+function card(big, subs, audio, extra = "") {
+  const el = document.createElement("div");
+  el.className = "card";
+  el.innerHTML = `<div class="big">${big}</div>${subs.map((s) => `<div class="sub">${s}</div>`).join("")}${extra}`;
+  el.addEventListener("click", (e) => {
+    const ex = e.target.closest("[data-audio]");
+    H.play(ex ? ex.dataset.audio : audio);
+    flash(el);
+  });
+  return el;
+}
+function grid(cards) {
+  const g = document.createElement("div");
+  g.className = "grid";
+  cards.forEach((c) => g.appendChild(c));
+  return g;
+}
+
+const tabs = {
+  cons() {
+    note.textContent = "點卡片聽子音名稱，點「例」聽搭配 ㅏ 的發音。平音／激音（送氣）／緊音（喉嚨用力、不送氣）的注音相同，請以聲音為準。";
+    view.appendChild(grid(H.L.map((c, i) => {
+      const ex = H.info(i, 0);
+      return card(c.j, [c.name, `${c.type}　${c.rr || "（不發音）"}　${c.zy}`], H.nameAudio(i),
+        `<div class="ex">例 <button data-audio="${ex.audio}">${ex.ch}</button></div>`);
+    })));
+  },
+  vow() {
+    note.textContent = "母音單獨書寫時前面加 ㅇ（不發音）。注音為近似音：ㅓ 嘴巴張開不圓唇、ㅗ 圓唇不滑動、ㅡ 嘴角向兩邊拉。";
+    view.appendChild(grid(H.V.map((v, i) => {
+      const x = H.info(11, i);
+      return card(v.j, [`${x.ch}　${v.rr}`, zyHtml(x)], x.audio);
+    })));
+  },
+  fin() {
+    note.textContent = "尾音（받침）共 27 種，單獨發音時只有 7 種代表音。以「아＋尾音」為例。";
+    for (const [k, r] of Object.entries(H.REP)) {
+      const h = document.createElement("h3");
+      h.innerHTML = `${r.label} <span class="sub">注音近似 ${r.zy}</span>`;
+      view.appendChild(h);
+      const cards = [];
+      H.T.forEach((t, ti) => {
+        if (t.rep !== k) return;
+        const x = H.info(11, 0, ti);
+        cards.push(card(t.j, [`${x.ch}　${x.rr}`, x.sound !== x.ch ? `讀 [${x.sound}]` : "&nbsp;"], x.audio));
+      });
+      view.appendChild(grid(cards));
+    }
+  },
+  table() {
+    note.textContent = "選一個子音看 21 種母音組合，或切換顯示全表（19 × 21 = 399）。";
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    const body = document.createElement("div");
+    const options = ["全表", ...H.L.map((c) => c.j)];
+    let sel = sessionGet("row", "1");
+    options.forEach((label, idx) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = label;
+      b.onclick = () => { sel = String(idx); sessionSet("row", sel); render(); };
+      chips.appendChild(b);
+    });
+    function render() {
+      [...chips.children].forEach((b, i) => b.classList.toggle("on", String(i) === sel));
+      body.innerHTML = "";
+      if (sel === "0") body.appendChild(fullTable());
+      else {
+        const l = Number(sel) - 1;
+        body.appendChild(grid(H.V.map((_, v) => {
+          const x = H.info(l, v);
+          return card(x.ch, [x.rr, zyHtml(x)], x.audio);
+        })));
+      }
+    }
+    view.append(chips, body);
+    render();
+  },
+};
+
+function fullTable() {
+  const wrap = document.createElement("div");
+  wrap.className = "table-wrap";
+  let html = "<table><thead><tr><th></th>" + H.V.map((v) => `<th>${v.j}</th>`).join("") + "</tr></thead><tbody>";
+  H.L.forEach((c, l) => {
+    html += `<tr><th>${c.j}</th>`;
+    H.V.forEach((_, v) => {
+      const x = H.info(l, v);
+      html += `<td data-audio="${x.audio}" title="${x.rr} ${x.zy}">${x.ch}</td>`;
+    });
+    html += "</tr>";
+  });
+  wrap.innerHTML = html + "</tbody></table>";
+  wrap.addEventListener("click", (e) => {
+    const td = e.target.closest("td");
+    if (td) { H.play(td.dataset.audio); flash(td); }
+  });
+  return wrap;
+}
+
+function sessionGet(k, d) { try { return sessionStorage.getItem(k) ?? d; } catch { return d; } }
+function sessionSet(k, v) { try { sessionStorage.setItem(k, v); } catch {} }
+
+function show(name) {
+  if (!tabs[name]) name = "cons";
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
+  view.innerHTML = "";
+  tabs[name]();
+}
+document.getElementById("tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b) location.hash = b.dataset.tab;
+});
+window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+show(location.hash.slice(1));
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>韓文組字</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header><div class="bar">
+  <h1>韓文字母發音表</h1>
+  <nav><a href="index.html">發音</a><a href="compose.html" class="on">組合</a></nav>
+</div></header>
+<main class="compose">
+  <div class="picker">
+    <h3>① 子音</h3><div class="chips" id="pl"></div>
+    <h3>② 母音</h3><div class="chips" id="pv"></div>
+    <h3>③ 尾音</h3><div class="chips" id="pt"></div>
+  </div>
+  <div class="result">
+    <div class="char" id="char"></div>
+    <div class="row"><span class="lbl">組成</span><span id="parts"></span></div>
+    <div class="row"><span class="lbl">羅馬拼音</span><span id="rr"></span></div>
+    <div class="row"><span class="lbl">注音近似</span><span id="zy"></span></div>
+    <div class="row" id="soundRow"><span class="lbl">實際發音</span><span id="sound"></span></div>
+    <button class="playbtn" id="play">▶ 播放</button>
+    <label class="auto"><input type="checkbox" id="auto" checked> 選擇後自動播放</label>
+  </div>
+</main>
+<script src="hangul.js"></script>
+<script>
+const st = { l: 0, v: 0, t: 0 };
+const $ = (id) => document.getElementById(id);
+
+function chips(id, items, key) {
+  const box = $(id);
+  items.forEach((label, i) => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = label;
+    b.onclick = () => { st[key] = i; update(true); };
+    box.appendChild(b);
+  });
+}
+chips("pl", H.L.map((c) => c.j), "l");
+chips("pv", H.V.map((v) => v.j), "v");
+chips("pt", H.T.map((t) => t.j || "無"), "t");
+
+function update(fromClick) {
+  for (const [id, key] of [["pl", "l"], ["pv", "v"], ["pt", "t"]])
+    [...$(id).children].forEach((b, i) => b.classList.toggle("on", i === st[key]));
+  const x = H.info(st.l, st.v, st.t);
+  $("char").textContent = x.ch;
+  $("parts").textContent = [H.L[st.l].j, H.V[st.v].j, H.T[st.t].j].filter(Boolean).join(" + ");
+  $("rr").textContent = x.rr;
+  $("zy").innerHTML = x.zy + (x.zyFinal ? `<small class="zf">${x.zyFinal}</small>` : "");
+  $("sound").textContent = `[${x.sound}]`;
+  $("soundRow").style.display = x.sound !== x.ch ? "" : "none";
+  history.replaceState(null, "", `#${x.ch}`);
+  if (fromClick && $("auto").checked) H.play(x.audio);
+}
+$("play").onclick = () => H.play(H.info(st.l, st.v, st.t).audio);
+
+// 網址 #가 可直接帶入字
+const init = decodeURIComponent(location.hash.slice(1));
+if (/^[가-힣]$/.test(init)) Object.assign(st, H.decompose(init));
+update(false);
+</script>
+</body>
+</html>
