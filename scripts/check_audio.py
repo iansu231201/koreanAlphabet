@@ -1,4 +1,4 @@
-"""檢查 site/audio 是否齊全：11,172 音節 + 19 子音名稱，且每檔皆為有效、非靜音的 mp3。"""
+"""檢查 site/audio 是否齊全：3,192 代表音音節 + 19 子音名稱，且每檔皆為有效、非靜音的 mp3。"""
 import hashlib
 import json
 import subprocess
@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 OUT = Path(__file__).resolve().parent.parent / "site" / "audio"
-expected = [f"{cp:04X}.mp3" for cp in range(0xAC00, 0xD7A4)] + [f"name{i}.mp3" for i in range(19)]
+REP_FINALS = (0, 1, 4, 7, 8, 16, 17, 21)
+expected = [f"{cp:04X}.mp3" for cp in range(0xAC00, 0xD7A4) if (cp - 0xAC00) % 28 in REP_FINALS] + [f"name{i}.mp3" for i in range(19)]
 
 missing = [f for f in expected if not (OUT / f).exists()]
 bad, hashes = [], {}

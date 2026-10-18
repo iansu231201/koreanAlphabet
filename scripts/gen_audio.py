@@ -1,4 +1,4 @@
-"""產生全部韓文音節（11,172）與子音名稱的 mp3。
+"""產生韓文音節（代表音尾音，涵蓋全部 11,172 字的發音）與子音名稱的 mp3。
 
 已存在的檔案會跳過，可中斷後重跑。
 用法: python scripts/gen_audio.py [--force]
@@ -22,9 +22,16 @@ CONSONANT_NAMES = [
 ]
 
 
+# 只產生「無尾音」與 7 個代表音尾音（ㄱㄴㄷㄹㅁㅂㅇ）的音節：19 × 21 × 8 = 3,192 個。
+# 單獨音節中其他尾音一律讀成代表音（닭→[닥]、값→[갑]），網頁直接播放代表音字的音檔。
+# （edge-tts 對 ㄺ、ㄻ、ㄿ 等複合尾音常讀錯，例如 갉 讀成 갈，所以不直接合成。）
+REP_FINALS = (0, 1, 4, 7, 8, 16, 17, 21)
+
+
 def jobs():
     for cp in range(0xAC00, 0xD7A4):
-        yield chr(cp), OUT / f"{cp:04X}.mp3"
+        if (cp - 0xAC00) % 28 in REP_FINALS:
+            yield chr(cp), OUT / f"{cp:04X}.mp3"
     for i, name in enumerate(CONSONANT_NAMES):
         yield name, OUT / f"name{i}.mp3"
 

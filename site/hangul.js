@@ -56,7 +56,10 @@ const H = (() => {
     { j: "ㅋ", rep: "k" }, { j: "ㅌ", rep: "t" }, { j: "ㅍ", rep: "p" }, { j: "ㅎ", rep: "t" },
   ];
 
-  const compose = (l, v, t = 0) => String.fromCharCode(0xac00 + (l * 21 + v) * 28 + t);
+  // 代表音對應的尾音索引
+  const REP_T = { k: 1, n: 4, t: 7, l: 8, m: 16, p: 17, ng: 21 };
+
+  const compose =(l, v, t = 0) => String.fromCharCode(0xac00 + (l * 21 + v) * 28 + t);
   const decompose = (ch) => {
     const n = ch.charCodeAt(0) - 0xac00;
     return { l: Math.floor(n / 588), v: Math.floor((n % 588) / 28), t: n % 28 };
@@ -75,15 +78,16 @@ const H = (() => {
       tz = "";
     }
     const ch = compose(l, v, t);
-    // 實際發音：尾音換成代表音後的字（僅複合 / 非代表尾音時與原字不同）
-    const repT = { k: 1, n: 4, t: 7, l: 8, m: 16, p: 17, ng: 21 }[rep] ?? 0;
+    // 實際發音：尾音換成代表音後的字（僅複合 / 非代表尾音時與原字不同）。
+    // 單獨音節的發音與其代表音字完全相同，因此播放代表音字的音檔。
+    const sound = compose(l, v, REP_T[rep] ?? 0);
     return {
       ch,
       rr: L[l].rr + V[v].rr + (fin ? fin.rr : ""),
       zy: lz + vz,
       zyFinal: tz,
-      sound: compose(l, v, repT),
-      audio: `audio/${ch.charCodeAt(0).toString(16).toUpperCase()}.mp3`,
+      sound,
+      audio: `audio/${sound.charCodeAt(0).toString(16).toUpperCase()}.mp3`,
     };
   };
 
