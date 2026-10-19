@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-VOICE = "ko-KR-Standard-A"
+VOICE = "ko-KR-Standard-D"
 CONCURRENCY = 4
 PROJECT = Path(__file__).resolve().parent.parent
 OUT = PROJECT / "site" / "audio"
