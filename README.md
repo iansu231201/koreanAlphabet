@@ -22,21 +22,22 @@
 
 ## 發音說明
 
-- 語音為微軟 Edge 神經網路語音 `ko-KR-SunHiNeural`（女聲），事先產生成 mp3 放在網站中，**瀏覽時不需呼叫任何外部服務**。
+- 語音為 Google Cloud Text-to-Speech 的 `ko-KR-Standard-A`（女聲），事先產生成 mp3 放在網站中，**瀏覽時不需呼叫任何外部服務**。
 - 單獨一個字時，尾音只有 7 種代表音（닭→[닥]、값→[갑]），所以複合尾音的字播放其代表音字的錄音，以符合韓語標準發音。
 - 羅馬拼音採用韓國文化觀光部的「國語羅馬字表記法」。
 - 注音僅為近似音，韓語的平音、激音、緊音在注音上無法區分，請以實際聲音為準。
-- 已知限制：語音引擎將 쇼/쑈、셀/쎌、뮌/뮨 讀成相同的聲音。
+- 已知限制：部分罕用字和相近的常用字被語音引擎讀成相同聲音（例如 쎽／섹、뗙／떡、킉／퀵），罕用字的發音可能不準。
 
 ## 開發
 
 使用 Nix flake 建立開發環境，網站為純靜態 HTML／CSS／JavaScript，不需建置。
 
 ```bash
-nix develop                        # 進入開發環境（python + edge-tts、ffmpeg、gh）
-python scripts/gen_audio.py        # 產生缺少的語音檔（已存在的會跳過）
+nix develop                        # 進入開發環境（python、ffmpeg、gh）
+python scripts/gen_audio.py        # 產生缺少的語音檔（需 Google Cloud TTS 金鑰，見下方）
 python scripts/check_audio.py      # 檢查語音檔是否齊全、長度正常
 python -m http.server -d site 8000 # 本機預覽 http://localhost:8000
 ```
 
+- 語音金鑰：在 Google Cloud 啟用 Cloud Text-to-Speech API 並建立 API 金鑰，存到 `.tts/google_key`（已 gitignore）或設定環境變數 `GOOGLE_TTS_KEY`
 - 部署：push 到 `main` 後，GitHub Actions 會自動將 `site/` 發佈到 GitHub Pages

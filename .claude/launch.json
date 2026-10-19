@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "site", "runtimeExecutable": "nix", "runtimeArgs": ["develop", "-c", "python", "-m", "http.server", "-d", "site", "8000"], "port": 8000 }
+    { "name": "site", "runtimeExecutable": "nix", "runtimeArgs": ["develop", "-c", "python", "-m", "http.server", "-d", "site", "8000"], "port": 8000 },
+    { "name": "compare", "runtimeExecutable": "nix", "runtimeArgs": ["develop", "-c", "python", "-m", "http.server", "-d", ".tts/compare", "8001"], "port": 8001 }
   ]
 }
